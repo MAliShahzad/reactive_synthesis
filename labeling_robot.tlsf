@@ -1,0 +1,74 @@
+INFO {
+  TITLE:       "Labeling robot"
+  DESCRIPTION: "Robot for labeling packages at packaging lines."
+  SEMANTICS:   Mealy
+  TARGET:      Mealy
+}
+
+GLOBAL {
+  PARAMETERS {
+    // packaging lines
+    n = 4;
+  }
+}
+
+MAIN {
+    INPUTS {
+        label_request[n];       // packaging line requests labeling
+        is_express;             // package requires an express label
+        standard_available;     // standard labels are available
+        express_available;      // express labels are available
+    }
+
+    OUTPUTS {
+        label_location[n];      // packaging line being serviced
+        apply_standard;         // apply a standard label
+        apply_express;          // apply an express label
+        restock;                // restock labels at the supply room
+    }
+
+    ASSERT {
+        // The robot can service at most one packaging line at a time
+        &&[0 <= i < n]( &&[i < j < n](
+            !(label_location[i] && label_location[j])
+        ));
+
+        // Every labeling request is eventually handled
+        &&[0 <= i < n](
+            label_request[i] -> F label_location[i]
+        );
+
+        // Never apply standard and express labels simultaneously
+        !(apply_standard && apply_express);
+
+        &&[0 <= i < n](
+            label_location[i] -> (apply_standard || apply_express)
+        );
+
+        // Express packages receive express labels
+        apply_express -> is_express;
+
+        // Standard packages receive standard labels
+        apply_standard -> !is_express;
+
+        // A standard label can only be applied if one is available
+        apply_standard -> standard_available;
+
+        // An express label can only be applied if one is available
+        apply_express -> express_available;
+
+        // Restock when either type of label is unavailable
+        (!standard_available || !express_available) -> restock;
+
+        // The robot cannot restock while servicing a packaging line
+        restock -> &&[0 <= i < n](!label_location[i]);
+    }
+
+    ASSUME {
+        // Restocking eventually replenishes both types of labels
+        G (restock -> F (standard_available && express_available));
+    }
+
+    GUARANTEES {
+    }
+}

@@ -1,0 +1,22 @@
+HOA: v1
+States: 4
+Start: 0
+AP: 10 "perform_service" "service_location_0" "service_location_1" "service_location_2" "service_location_3" "is_jammed" "call_from_0" "call_from_1" "call_from_2" "call_from_3"
+acc-name: all
+Acceptance: 0 t
+properties: trans-labels explicit-labels state-acc deterministic weak
+controllable-AP: 0 1 2 3 4
+--BODY--
+State: 0
+[0&1&!2&!3&!4&!5] 1
+[!0&!1&!2&!3&!4&5] 0
+State: 1
+[0&!1&2&!3&!4&!5] 2
+[!0&!1&!2&!3&!4&5] 1
+State: 2
+[0&!1&!2&3&!4&!5] 3
+[!0&!1&!2&!3&!4&5] 2
+State: 3
+[0&!1&!2&!3&4&!5] 0
+[0&!1&!2&!3&4&5] 3
+--END--

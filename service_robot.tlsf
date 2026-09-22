@@ -1,0 +1,65 @@
+INFO {
+  TITLE:       "Service robot"
+  DESCRIPTION: "Robot for resolving jammed packaging lines."
+  SEMANTICS:   Mealy
+  TARGET:      Mealy
+}
+
+GLOBAL {
+  PARAMETERS {
+    // lines
+    n = 4; 
+  }
+}
+
+MAIN {
+
+  INPUTS {
+    call_from[n]; // request from packaging line
+
+    is_jammed; // label application finished
+  } 
+
+  OUTPUTS {
+    service_location[n]; // service packaging line
+
+    perform_service;
+  }
+
+
+  ASSERT {
+    // At most one packaging line can be serviced at a time
+    &&[0 <= i < n]( &&[i < j < n](
+        !(service_location[i] && service_location[j])
+    ));
+
+    // Every service request is eventually handled
+    &&[0 <= i < n](
+        call_from[i] -> F service_location[i]
+    );
+
+    // Service can only be performed while at a packaging line
+    perform_service -> ||[0 <= i < n](service_location[i]);
+
+    // If a line is still jammed, continue servicing the same line
+    &&[0 <= i < n](
+        (service_location[i] && perform_service && is_jammed)
+        -> X (service_location[i] && perform_service)
+    );
+
+    // If the robot is at a service location, it performs service
+    &&[0 <= i < n](
+        service_location[i] -> perform_service
+    );
+  }
+
+  ASSUME {
+    // Whenever a line is jammed, it will eventually become unjammed
+    G (is_jammed -> F !is_jammed);
+  }
+
+  GUARANTEES {
+    
+  }
+  
+}

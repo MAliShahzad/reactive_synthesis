@@ -1,0 +1,73 @@
+INFO {
+  TITLE:       "Packaging line"
+  DESCRIPTION: "Controller for processing packages on a packaging line."
+  SEMANTICS:   Mealy
+  TARGET:      Mealy
+}
+
+MAIN {
+
+    INPUTS {
+        order_complete;       // filling has completed the order
+        label_complete;       // labeling robot has completed labeling
+        seal_complete;        // package has been sealed
+        jammed;               // packaging line is jammed
+    }
+
+    OUTPUTS {
+        fill;                 // fill package with items
+        seal;                 // seal the package
+        request_label;        // request labeling robot
+        request_service;      // request service robot
+        forward_package;      // forward completed package
+    }
+
+    ASSERT {
+        // Filling and sealing cannot happen simultaneously
+        !(fill && seal);
+
+        // If the line is jammed, package-processing actions are inhibited
+        jammed -> (!fill && !seal && !request_label && !forward_package);
+
+        // If the line is jammed, request the service robot
+        jammed -> request_service;
+
+        // Request labeling while it is incomplete and the line is not jammed
+        (!label_complete && !jammed) -> request_label;
+
+        // Never fill an already sealed package
+        seal_complete -> !fill;
+
+        // Forward only when filling, labeling, and sealing are complete
+        forward_package ->
+            (order_complete && label_complete && seal_complete);
+
+        // Once all processing steps are complete and the line is operational,
+        // forward the package
+        (order_complete && label_complete && seal_complete && !jammed)
+            -> forward_package;
+
+        // Fill while the order is incomplete
+        (!order_complete && !seal_complete && !jammed) -> fill;
+
+        // Seal once filling is complete
+        (order_complete && !seal_complete && !jammed) -> seal;
+    }
+
+    ASSUME {
+        // Filling eventually completes the order
+        G (fill -> F order_complete);
+
+        // Sealing eventually completes
+        G (seal -> F seal_complete);
+
+        // A labeling request is eventually completed
+        G (request_label -> F label_complete);
+
+        // A jam is eventually resolved
+        G (jammed -> F !jammed);
+    }
+
+    GUARANTEES {
+    }
+}
