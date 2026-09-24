@@ -17,10 +17,6 @@ MAIN {
         standard_arrival[n];
         express_arrival;
         container_full;
-
-        // Bonus input:
-        // true when a standard package has waited
-        // longer than the allowed threshold
         priority_escalated[n];
     }
 
@@ -32,140 +28,55 @@ MAIN {
 
     ASSUME {
 
-        // There are repeatedly opportunities to process
-        // standard packages
         G F (!express_arrival && !container_full);
     }
 
     GUARANTEE {
 
-        // -------------------------------------------------
         // Every standard package is eventually handled
-        // -------------------------------------------------
-
         &&[0 <= i < n]
-            G (
-                standard_arrival[i]
-                ->
-                F handle_standard[i]
-            );
+            G (standard_arrival[i] -> F handle_standard[i]);
 
 
-        // -------------------------------------------------
         // Every express package is eventually handled
-        // -------------------------------------------------
-
-        G (
-            express_arrival
-            ->
-            F handle_express
-        );
+        G (express_arrival -> F handle_express);
 
 
-        // -------------------------------------------------
-        // BONUS:
-        // Every escalated standard package is eventually
-        // handled
-        // -------------------------------------------------
-
+        // Every escalated standard package is eventually handled
         &&[0 <= i < n]
-            G (
-                priority_escalated[i]
-                ->
-                F handle_standard[i]
-            );
+            G (priority_escalated[i] -> F handle_standard[i]);
 
 
-        // -------------------------------------------------
-        // Modified express-priority rule
-        //
-        // Normal standard packages cannot be handled while
-        // an express package is waiting.
-        //
-        // Escalated standard packages are allowed to be
-        // handled.
-        // -------------------------------------------------
-
+        // Express packages have priority unless a standard package is escalated
         G (
-            express_arrival
-            ->
-            (
-                (
-                    &&[0 <= i < n]
-                        (
-                            !priority_escalated[i]
-                            ->
-                            !handle_standard[i]
-                        )
-                )
+            express_arrival -> (
+                (&&[0 <= i < n]
+                    (!priority_escalated[i] -> !handle_standard[i]))
                 U
                 handle_express
-            )
-        );
+        ));
 
 
-        // -------------------------------------------------
-        // At most one standard package can be handled
-        // at the same time
-        // -------------------------------------------------
-
+        // At most one standard package is handled at once
         &&[0 <= i < n]
         &&[i + 1 <= j < n]
-            G !(
-                handle_standard[i]
-                &&
-                handle_standard[j]
-            );
+            G !(handle_standard[i] && handle_standard[j]);
 
 
-        // -------------------------------------------------
-        // Express and standard packages cannot be handled
-        // simultaneously
-        // -------------------------------------------------
-
+        // Express and standard cannot be handled simultaneously
         &&[0 <= i < n]
-            G !(
-                handle_express
-                &&
-                handle_standard[i]
-            );
+            G !(handle_express && handle_standard[i]);
 
 
-        // -------------------------------------------------
-        // No standard package can be handled while the
-        // container is full
-        // -------------------------------------------------
-
-        G (
-            container_full
-            ->
-            (
-                &&[0 <= i < n]
-                    !handle_standard[i]
-            )
-        );
+        // No standard package is handled while container is full
+        G (container_full -> (&&[0 <= i < n] !handle_standard[i]));
 
 
-        // -------------------------------------------------
-        // Full container eventually causes a truck request
-        // -------------------------------------------------
-
-        G (
-            container_full
-            ->
-            F request_truck
-        );
+        // Full container eventually causes truck request
+        G (container_full -> F request_truck);
 
 
-        // -------------------------------------------------
-        // Truck can only be requested when the container
-        // is full
-        // -------------------------------------------------
-
-        G (
-            request_truck
-            ->
-            container_full
-        );
+        // Truck only requested when container is full
+        G (request_truck -> container_full);
     }
 }
